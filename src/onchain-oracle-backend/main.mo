@@ -6,6 +6,8 @@ import { print } = "mo:base/Debug";
 import { recurringTimer } = "mo:base/Timer";
 import { cancelTimer } = "mo:base/Timer";
 import Timer "mo:base/Timer";
+import Int "mo:base/Int";
+import Time "mo:base/Time";
 
 actor {
 
@@ -24,12 +26,15 @@ actor {
 
         // Setup the URL to fetch the latest data
         let host : Text = "api.exchange.coinbase.com";
-        let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&limit=60";
+        let timestamp = Int.toText(Time.now());
+        let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&limit=60&nonce=" # timestamp;
 
         // Prepare headers for the system http_request call
         let request_headers = [
             { name = "Host"; value = host # ":443" },
             { name = "User-Agent"; value = "exchange_rate_canister" },
+            { name = "Cache-Control"; value = "no-cache" },
+            { name = "Pragma"; value = "no-cache" },
         ];
 
         // Transform context
