@@ -10,8 +10,8 @@ actor {
     let fetchInterval = 60; // Duration in seconds for the reminder
 
     var latestData : Text = ""; // Variable to store the latest fetched data
-    var startTime : Text = ""; // Variable to store the start time
-    var endTime : Text = ""; // Variable to store the end time
+    // var startTime : Text = ""; // Variable to store the start time
+    // var endTime : Text = ""; // Variable to store the end time
 
     // This function will fetch the data and store it in latestData
     private func fetchData() : async () {
@@ -21,7 +21,8 @@ actor {
         // Setup the URL with stored startTime and endTime
         let host : Text = "api.exchange.coinbase.com";
         // Replace the existing `let url` line in `fetchData` function with this:
-        let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&start=" # startTime # "&end=" # endTime;
+        let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&limit=60";
+
 
         // Prepare headers for the system http_request call
         let request_headers = [
@@ -63,9 +64,10 @@ actor {
     };
 
     // This function sets up the initial timer and stores the start and end times
-    public func setup(startTimeParam : Text, endTimeParam : Text) : async () {
-        startTime := startTimeParam;
-        endTime := endTimeParam;
+    // public func setup(startTimeParam : Text, endTimeParam : Text) : async () {
+    public func setup() : async () {
+        // startTime := startTimeParam;
+        // endTime := endTimeParam;
         await fetchData();
         ignore recurringTimer<system>(#seconds(fetchInterval), fetchData);
     };

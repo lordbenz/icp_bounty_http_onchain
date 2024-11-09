@@ -9,6 +9,7 @@ function App() {
   const fetchLatestData = async () => {
     try {
       const rawData = await onchain_oracle_backend.get_latest_data();
+      console.log('fetch latest data')
       // Parse the response into JSON
       const parsedData = JSON.parse(rawData);
 
@@ -30,16 +31,8 @@ function App() {
     const initialize = async () => {
       setFetching(true);
       try {
-        // Compute endTime as the current time in ISO 8601 format
-        const now = new Date();
-        const endTime = now.toISOString();
-  
-        // Compute startTime as 60 minutes before endTime
-        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-        const startTime = oneHourAgo.toISOString();
-  
-        // Call the setup function on the backend with current startTime and endTime
-        await onchain_oracle_backend.setup(startTime, endTime);
+        // Call the setup function on the backend
+        await onchain_oracle_backend.setup();
   
         // Fetch the latest data immediately
         await fetchLatestData();
@@ -58,6 +51,7 @@ function App() {
   
     initialize();
   }, []);
+  
   
 
   return (
