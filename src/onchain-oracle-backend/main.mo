@@ -30,8 +30,8 @@ actor {
         let host : Text = "api.exchange.coinbase.com";
         let timestampNanoSecond = Time.now(); // convert to seconds from nanoseconds
         let timestampSecond = timestampNanoSecond / 1_000_000_000;
-        let startTime = timestampSecond - 60 * 60; // 60 minutes ago
-        let endTime = timestampSecond;
+        let endTime = (timestampSecond / 60) * 60;
+        let startTime = endTime - 60 * 60; // 60 minutes ago
 
         let url = "https://" # host # "/products/BTC-USD/candles?start=" # Int.toText(startTime) # "&end=" # Int.toText(endTime) # "&granularity=60";
 
