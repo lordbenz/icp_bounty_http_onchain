@@ -4,23 +4,38 @@ import { onchain_oracle_backend } from "declarations/onchain-oracle-backend";
 function App() {
   const [priceData, setPriceData] = useState([]);
   const [fetching, setFetching] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastBackendUpdate, setLastBackendUpdate] = useState(null);
 
   // Function to fetch the latest data from the backend
   const fetchLatestData = async () => {
     try {
+      console.log('[frontend] fetchLatestData called');
       const rawData = await onchain_oracle_backend.get_latest_data();
-      console.log('fetch latest data')
+      console.log('[frontend] rawData:', rawData);
+
       // Parse the response into JSON
       const parsedData = JSON.parse(rawData);
+      console.log('[frontend] parsedData:', parsedData);
 
       // Extract timestamp and closing price (index 0: timestamp, index 4: close price)
       const formattedData = parsedData.map(([timestamp, , , , closePrice]) => ({
         timestamp,
         price: closePrice,
       }));
+      console.log('[frontend] formattedData:', formattedData);
 
       // Update state with the formatted data
       setPriceData(formattedData);
+
+      // Update the last updated time
+      setLastUpdated(new Date());
+
+      // Get the latest timestamp from the data
+      const latestTimestamp = formattedData[0]?.timestamp;
+      if (latestTimestamp) {
+        setLastBackendUpdate(new Date(Number(latestTimestamp) * 1000));
+      }
     } catch (error) {
       console.error("Error fetching latest data:", error);
     }
@@ -37,8 +52,8 @@ function App() {
         // Fetch the latest data immediately
         await fetchLatestData();
   
-        // Set up interval to fetch data every minute
-        const intervalId = setInterval(fetchLatestData, 60000); // 60000 milliseconds = 1 minute
+        // Set up interval to fetch data every 60 seconds
+        const intervalId = setInterval(fetchLatestData, 60000); 
   
         // Clean up the interval when the component unmounts
         return () => clearInterval(intervalId);
@@ -51,8 +66,6 @@ function App() {
   
     initialize();
   }, []);
-  
-  
 
   return (
     <main>
@@ -61,6 +74,12 @@ function App() {
       </header>
       <section>
         {fetching ? <p>Loading data...</p> : null}
+        {lastUpdated && (
+          <p>Frontend last updated: {lastUpdated.toLocaleString()}</p>
+        )}
+        {lastBackendUpdate && (
+          <p>Backend data timestamp: {lastBackendUpdate.toLocaleString()}</p>
+        )}
         <table>
           <thead>
             <tr>

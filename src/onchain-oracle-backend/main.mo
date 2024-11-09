@@ -4,25 +4,27 @@ import Text "mo:base/Text";
 import Types "Types";
 import { print } = "mo:base/Debug";
 import { recurringTimer } = "mo:base/Timer";
+import { cancelTimer } = "mo:base/Timer";
+import Timer "mo:base/Timer";
 
 actor {
 
     let fetchInterval = 60; // Duration in seconds for the reminder
 
     var latestData : Text = ""; // Variable to store the latest fetched data
-    // var startTime : Text = ""; // Variable to store the start time
-    // var endTime : Text = ""; // Variable to store the end time
+    var timerId : ?Timer.TimerId = null; // Variable to store the TimerId of the active timer
 
     // This function will fetch the data and store it in latestData
     private func fetchData() : async () {
+        // Log when fetchData is called
+        print("[backend] fetchData called");
+
         // DECLARE MANAGEMENT CANISTER
         let ic : Types.IC = actor ("aaaaa-aa");
 
-        // Setup the URL with stored startTime and endTime
+        // Setup the URL to fetch the latest data
         let host : Text = "api.exchange.coinbase.com";
-        // Replace the existing `let url` line in `fetchData` function with this:
         let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&limit=60";
-
 
         // Prepare headers for the system http_request call
         let request_headers = [
@@ -50,7 +52,9 @@ actor {
         Cycles.add(20_949_972_000);
 
         // Make HTTP request and wait for response
+        print("[backend] Fetching data...");
         let http_response : Types.HttpResponsePayload = await ic.http_request(http_request);
+        print("[backend] Fetching data done");
 
         // Decode the response
         let response_body : Blob = Blob.fromArray(http_response.body);
@@ -61,21 +65,33 @@ actor {
 
         // Store the response in latestData
         latestData := decoded_text;
+
+        // Log that latestData has been updated
+        print("[backend] latestData updated");
     };
 
-    // This function sets up the initial timer and stores the start and end times
-    // public func setup(startTimeParam : Text, endTimeParam : Text) : async () {
+    // This function sets up the initial timer
     public func setup() : async () {
-        // startTime := startTimeParam;
-        // endTime := endTimeParam;
+        // Cancel existing timer if it exists
+        switch (timerId) {
+            case (?id) {
+                cancelTimer(id);
+                timerId := null; // Reset the timerId
+            };
+            case null {};
+        };
+
+        // Fetch data immediately
         await fetchData();
-        ignore recurringTimer<system>(#seconds(fetchInterval), fetchData);
+
+        // Start new timer and store its TimerId
+        timerId := ?(recurringTimer<system>(#seconds(fetchInterval), fetchData));
     };
 
-    // This function returns the latest fetched data
-    // [Query call]
-
-    public query func get_latest_data() : async Text {
+    // This function returns the latest fetched data (now an update call)
+    public func get_latest_data() : async Text {
+        // Log when get_latest_data is called
+        print("[backend] get_latest_data called");
         return latestData;
     };
 
