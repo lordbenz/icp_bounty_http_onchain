@@ -8,12 +8,14 @@ import { cancelTimer } = "mo:base/Timer";
 import Timer "mo:base/Timer";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
+import Array "mo:base/Array";
 
 actor {
 
     let fetchInterval = 60; // Duration in seconds for the reminder
 
-    var latestData : Text = ""; // Variable to store the latest fetched data
+    // var latestData : Text = ""; // Variable to store the latest fetched data
+    var latestDataArray : [Text] = []; // Variable to store the latest fetched data
     var timerId : ?Timer.TimerId = null; // Variable to store the TimerId of the active timer
 
     // This function will fetch the data and store it in latestData
@@ -26,8 +28,12 @@ actor {
 
         // Setup the URL to fetch the latest data
         let host : Text = "api.exchange.coinbase.com";
-        let timestamp = Int.toText(Time.now());
-        let url = "https://" # host # "/products/BTC-USD/candles?granularity=60&limit=60&nonce=" # timestamp;
+        let timestampNanoSecond = Time.now(); // convert to seconds from nanoseconds
+        let timestampSecond = timestampNanoSecond / 1_000_000_000;
+        let startTime = timestampSecond - 60 * 60; // 60 minutes ago
+        let endTime = timestampSecond;
+
+        let url = "https://" # host # "/products/BTC-USD/candles?start=" # Int.toText(startTime) # "&end=" # Int.toText(endTime) # "&granularity=60";
 
         // Prepare headers for the system http_request call
         let request_headers = [
@@ -54,7 +60,7 @@ actor {
         };
 
         // Add cycles to pay for HTTP request
-        Cycles.add(20_949_972_000);
+        Cycles.add<system>(20_949_972_000);
 
         // Make HTTP request and wait for response
         print("[backend] Fetching data...");
@@ -69,7 +75,8 @@ actor {
         };
 
         // Store the response in latestData
-        latestData := decoded_text;
+        // latestData := decoded_text;
+        latestDataArray := Array.append(latestDataArray, [decoded_text]);
 
         // Log that latestData has been updated
         print("[backend] latestData updated");
@@ -94,10 +101,10 @@ actor {
     };
 
     // This function returns the latest fetched data (now an update call)
-    public func get_latest_data() : async Text {
+    public func get_latest_data() : async [Text] {
         // Log when get_latest_data is called
         print("[backend] get_latest_data called");
-        return latestData;
+        return latestDataArray;
     };
 
     // The transform function remains the same
