@@ -1,0 +1,8 @@
+{
+  "onchain-oracle-backend": {
+    "ic": "ggqp6-qqaaa-aaaao-qezhq-cai"
+  },
+  "onchain-oracle-frontend": {
+    "ic": "e4mhc-oaaaa-aaaao-qeziq-cai"
+  }
+}

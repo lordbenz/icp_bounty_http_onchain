@@ -10,7 +10,7 @@ function App() {
     setFetching(true);
     try {
       // Fetch raw text response from the backend
-      const rawData = await onchain_oracle_backend.get_icp_usd_exchange();
+      const rawData = await onchain_oracle_backend.get_btc_usd_exchange();
       
       // Parse the response into JSON
       const parsedData = JSON.parse(rawData);
