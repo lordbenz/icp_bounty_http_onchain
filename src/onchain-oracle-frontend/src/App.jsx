@@ -5,13 +5,10 @@ function App() {
   const [priceData, setPriceData] = useState([]);
   const [fetching, setFetching] = useState(false);
 
-  // Fetch and load price data
-  const fetchPriceData = async () => {
-    setFetching(true);
+  // Function to fetch the latest data from the backend
+  const fetchLatestData = async () => {
     try {
-      // Fetch raw text response from the backend
-      const rawData = await onchain_oracle_backend.get_btc_usd_exchange();
-      
+      const rawData = await onchain_oracle_backend.get_latest_data();
       // Parse the response into JSON
       const parsedData = JSON.parse(rawData);
 
@@ -24,16 +21,44 @@ function App() {
       // Update state with the formatted data
       setPriceData(formattedData);
     } catch (error) {
-      console.error("Error fetching price data:", error);
-    } finally {
-      setFetching(false);
+      console.error("Error fetching latest data:", error);
     }
   };
 
-  // Fetch data when the component mounts
+  // useEffect to initialize setup and start fetching data
   useEffect(() => {
-    fetchPriceData();
+    const initialize = async () => {
+      setFetching(true);
+      try {
+        // Compute endTime as the current time in ISO 8601 format
+        const now = new Date();
+        const endTime = now.toISOString();
+  
+        // Compute startTime as 60 minutes before endTime
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const startTime = oneHourAgo.toISOString();
+  
+        // Call the setup function on the backend with current startTime and endTime
+        await onchain_oracle_backend.setup(startTime, endTime);
+  
+        // Fetch the latest data immediately
+        await fetchLatestData();
+  
+        // Set up interval to fetch data every minute
+        const intervalId = setInterval(fetchLatestData, 60000); // 60000 milliseconds = 1 minute
+  
+        // Clean up the interval when the component unmounts
+        return () => clearInterval(intervalId);
+      } catch (error) {
+        console.error("Error during initialization:", error);
+      } finally {
+        setFetching(false);
+      }
+    };
+  
+    initialize();
   }, []);
+  
 
   return (
     <main>
@@ -41,9 +66,7 @@ function App() {
         <h1>BTC-USD Price Oracle</h1>
       </header>
       <section>
-        <button onClick={fetchPriceData} disabled={fetching}>
-          {fetching ? "Fetching..." : "Fetch Latest Price"}
-        </button>
+        {fetching ? <p>Loading data...</p> : null}
         <table>
           <thead>
             <tr>
