@@ -18,27 +18,34 @@ function App() {
       console.log('[frontend] fetchLatestData called');
       const rawData: string[] = await onchain_oracle_backend.get_latest_data();
       console.log('[frontend] rawData:', rawData);
-
+  
       // Parse each item in the rawData array into JSON
       const parsedDataArray: number[][][] = rawData.map((item) => JSON.parse(item));
       console.log('[frontend] parsedDataArray:', parsedDataArray);
-
+  
+      // Flatten the array of arrays into a single array
       const flatData: number[][] = parsedDataArray.flat();
       console.log('[frontend] flatData:', flatData);
-
+  
       // Extract timestamp and closing price (index 0: timestamp, index 4: close price)
       const formattedData: PriceData[] = flatData.map(([timestamp, , , , closePrice]) => ({
         timestamp: Number(timestamp),
         price: Number(closePrice),
       }));
       console.log('[frontend] formattedData:', formattedData);
-
-      // Update state with the formatted data
-      setPriceData(formattedData);
-
+  
+      // Remove duplicate data points based on timestamp
+      const uniqueDataMap = new Map<number, PriceData>();
+      formattedData.forEach((data) => {
+        uniqueDataMap.set(data.timestamp, data);
+      });
+  
+      // Update state with the unique data
+      setPriceData(Array.from(uniqueDataMap.values()).sort((a, b) => b.timestamp - a.timestamp));
+  
       // Update the last updated time
       setLastUpdated(new Date());
-
+  
       // Get the latest timestamp from the data
       const latestTimestamp = formattedData[0]?.timestamp;
       if (latestTimestamp) {
@@ -48,6 +55,8 @@ function App() {
       console.error("Error fetching latest data:", error);
     }
   };
+  
+  
 
   // useEffect to initialize setup and start fetching data
   useEffect(() => {

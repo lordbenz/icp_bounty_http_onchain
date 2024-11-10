@@ -20,67 +20,83 @@ actor {
 
     // This function will fetch the data and store it in latestData
     private func fetchData() : async () {
-        // Log when fetchData is called
-        print("[backend] fetchData called");
+    // Log when fetchData is called
+    print("[backend] fetchData called");
 
-        // DECLARE MANAGEMENT CANISTER
-        let ic : Types.IC = actor ("aaaaa-aa");
+    // DECLARE MANAGEMENT CANISTER
+    let ic : Types.IC = actor ("aaaaa-aa");
 
-        // Setup the URL to fetch the latest data
-        let host : Text = "api.exchange.coinbase.com";
-        let timestampNanoSecond = Time.now(); // convert to seconds from nanoseconds
-        let timestampSecond = timestampNanoSecond / 1_000_000_000;
-        let endTime = (timestampSecond / 60) * 60;
-        let startTime = endTime - 60 * 60; // 60 minutes ago
+    // Setup the URL to fetch the latest data
+    let host : Text = "api.exchange.coinbase.com";
+    let timestampNanoSecond = Time.now(); // Current time in nanoseconds
+    let timestampSecond = timestampNanoSecond / 1_000_000_000; // Convert to seconds
 
-        let url = "https://" # host # "/products/BTC-USD/candles?start=" # Int.toText(startTime) # "&end=" # Int.toText(endTime) # "&granularity=60";
+    // Subtract a lag time to account for data availability (e.g., 3 minutes)
+    let lag = 180; // 180 seconds = 3 minutes
+    let endTime = ((timestampSecond - lag) / 60) * 60; // Round down to nearest minute
 
-        // Prepare headers for the system http_request call
-        let request_headers = [
-            { name = "Host"; value = host # ":443" },
-            { name = "User-Agent"; value = "exchange_rate_canister" },
-            { name = "Cache-Control"; value = "no-cache" },
-            { name = "Pragma"; value = "no-cache" },
-        ];
+    // Set startTime to 60 minutes before endTime
+    let startTime = endTime - 60 * 60; // 60 minutes ago
 
-        // Transform context
-        let transform_context : Types.TransformContext = {
-            function = transform;
-            context = Blob.fromArray([]);
-        };
+    // Convert times to text
+    let startTimeText = Int.toText(startTime);
+    let endTimeText = Int.toText(endTime);
+    print("[backend] startTime: " # startTimeText);
+    print("[backend] endTime: " # endTimeText);
 
-        // The HTTP request
-        let http_request : Types.HttpRequestArgs = {
-            url = url;
-            max_response_bytes = null; // Optional for request
-            headers = request_headers;
-            body = null; // Optional for request
-            method = #get;
-            transform = ?transform_context;
-        };
+    // Construct the URL
+    let url = "https://" # host # "/products/BTC-USD/candles?start=" # startTimeText
+        # "&end=" # endTimeText # "&granularity=60";
 
-        // Add cycles to pay for HTTP request
-        Cycles.add<system>(20_949_972_000);
+    print("[backend] URL: " # url);
 
-        // Make HTTP request and wait for response
-        print("[backend] Fetching data...");
-        let http_response : Types.HttpResponsePayload = await ic.http_request(http_request);
-        print("[backend] Fetching data done");
+    // Prepare headers for the system http_request call
+    let request_headers = [
+        { name = "Host"; value = host # ":443" },
+        { name = "User-Agent"; value = "exchange_rate_canister" },
+        { name = "Cache-Control"; value = "no-cache" },
+        { name = "Pragma"; value = "no-cache" },
+    ];
 
-        // Decode the response
-        let response_body : Blob = Blob.fromArray(http_response.body);
-        let decoded_text : Text = switch (Text.decodeUtf8(response_body)) {
-            case (null) { "No value returned" };
-            case (?y) { y };
-        };
-
-        // Store the response in latestData
-        // latestData := decoded_text;
-        latestDataArray := Array.append(latestDataArray, [decoded_text]);
-
-        // Log that latestData has been updated
-        print("[backend] latestData updated");
+    // Transform context
+    let transform_context : Types.TransformContext = {
+        function = transform;
+        context = Blob.fromArray([]);
     };
+
+    // The HTTP request
+    let http_request : Types.HttpRequestArgs = {
+        url = url;
+        max_response_bytes = null; // Optional for request
+        headers = request_headers;
+        body = null; // Optional for request
+        method = #get;
+        transform = ?transform_context;
+    };
+
+    // Add cycles to pay for HTTP request
+    Cycles.add<system>(20_949_972_000);
+
+    // Make HTTP request and wait for response
+    print("[backend] Fetching data...");
+    let http_response : Types.HttpResponsePayload = await ic.http_request(http_request);
+    print("[backend] Fetching data done");
+
+    // Decode the response
+    let response_body : Blob = Blob.fromArray(http_response.body);
+    let decoded_text : Text = switch (Text.decodeUtf8(response_body)) {
+        case (null) { "No value returned" };
+        case (?y) { y };
+    };
+
+    // Append the new data to latestDataArray
+    latestDataArray := Array.append(latestDataArray, [decoded_text]);
+
+    // Log that latestData has been updated
+    print("[backend] latestData updated");
+
+
+};
 
     // This function sets up the initial timer
     public func setup() : async () {
